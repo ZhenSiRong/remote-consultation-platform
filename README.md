@@ -8,12 +8,15 @@
 
 ## 演示
 
-两段录屏，都带鼠标轨迹：
+三段录屏，都带鼠标轨迹：
 
 | 片段 | 时长 | 内容 |
 |---|---|---|
 | [demo.mp4](https://cdn.jsdelivr.net/gh/ZhenSiRong/remote-consultation-platform@master/docs/demo.mp4) | 58 秒 | 工单闭环：列表 → 详情 → 受理 → 排期 → 开始 → 非法流转被拦 |
-| [demo-room.mp4](https://cdn.jsdelivr.net/gh/ZhenSiRong/remote-consultation-platform@master/docs/demo-room.mp4) | 1 分 43 秒 | 视频会诊室：设备检测 → 入会 → 录制提示 → 消息 → 资料 → 结束会诊 |
+| [demo-room.mp4](https://cdn.jsdelivr.net/gh/ZhenSiRong/remote-consultation-platform@master/docs/demo-room.mp4) | 1 分 43 秒 | 视频会诊室完整流程（测试信号源）：设备检测 → 入会 → 录制提示 → 消息 → 资料 → 结束会诊 |
+| [demo-room-live.mp4](https://cdn.jsdelivr.net/gh/ZhenSiRong/remote-consultation-platform@master/docs/demo-room-live.mp4) | 25 秒 | 真实摄像头接入：本地小窗是物理设备画面，人脸区域已做箱式模糊 |
+
+> 为什么真实采集单独录一段：同一台机器上两个 Chrome 实例会抢同一个摄像头（Windows 下多数 USB 摄像头是独占设备），第二个实例 `getUserMedia` 直接失败。所以完整流程用测试信号源（`--use-fake-device-for-media-stream`）录，保证可复现；真实摄像头能力单独录 25 秒佐证。打码是后期对小窗区域做箱式模糊——`<video>` 加 CSS `filter` 的方案在有头模式下没生效（注入时机在页面重挂载前），所以改用 ffmpeg 裁剪+模糊+叠回，坐标按 1440×810 视口固定。
 
 录屏里红色圆环是注入的光标指示器，点击时落点炸开红色涟漪——不是后期加的特效，是 `补充物/tools/record.mjs` 在 CDP 层注入的 DOM，配合缓动插值的鼠标轨迹，让「点了哪里、点了什么」在无声视频里也能看清。
 
@@ -289,8 +292,9 @@ HTTP 状态码只承载传输与会话层语义（401/403/429/5xx），**业务�
 │       └── docx2md.py       # docx → md 转换
 └── docs/
     ├── demo.mp4             # 工单闭环录屏（58 秒）
-    ├── demo-room.mp4        # 会诊室录屏（1 分 43 秒）
-    └── screenshots/         # 11 张实证截图
+    ├── demo-room.mp4        # 会诊室完整流程（测试信号源，1 分 43 秒）
+    ├── demo-room-live.mp4   # 真实摄像头 25 秒（人脸已打码）
+    └── screenshots/         # 12 张实证截图
 ```
 
 ## 8. 已知限制（务必先读）

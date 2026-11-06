@@ -82,9 +82,20 @@ fs.mkdirSync(path.dirname(outFile), { recursive: true });
 
 // ---------------------------------------------------------------- Chrome
 
+// 有头模式才能拿到物理摄像头：headless 下 getUserMedia 只能返回 fake device 的彩条。
+// 录真人画面时设 HEADLESS=0，窗口会被移到屏幕内可见位置（CDP screencast 抓渲染层，不怕被遮挡，
+// 但要关掉后台节流，否则窗口失焦后帧率会掉）。
+const HEADLESS = process.env.HEADLESS !== '0';
+
 const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdp-rec-'));
 const chrome = spawn(CHROME, [
-  '--headless=new',
+  ...(HEADLESS ? ['--headless=new'] : [
+    '--window-size=1600,900',
+    '--window-position=60,60',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding',
+    '--disable-background-timer-throttling',
+  ]),
   '--disable-gpu',
   '--no-sandbox',
   '--hide-scrollbars',
@@ -93,6 +104,8 @@ const chrome = spawn(CHROME, [
   '--disable-features=Translate,AcceptCHFrame',
   '--force-device-scale-factor=1',
   '--font-render-hinting=none',
+  // 自动接受摄像头/麦克风权限，但设备仍是真实设备（不是 fake device）
+  '--use-fake-ui-for-media-stream',
   `--remote-debugging-port=${PORT}`,
   `--user-data-dir=${userDataDir}`,
   `--window-size=${vw},${vh}`,
@@ -387,6 +400,19 @@ async function main() {
         await client.send('Page.navigate', { url: step.goto });
         await sleep(step.settle || 2200);
         await evaluate(initCursorScript());
+        // 隐私打码：录制时直接给所有 <video> 加模糊，而不是后期糊固定区域。
+        // 后期固定矩形挡不住人脸移动，一个转头就露；CSS 滤镜跟着元素走，永远不会露。
+        if (plan.blurVideo) {
+          const r = await evaluate(`(() => {
+            if (document.getElementById('__rcp_blur')) return 'already';
+            const s = document.createElement('style');
+            s.id = '__rcp_blur';
+            s.textContent = 'video{filter:blur(${Number(plan.blurVideo)}px) saturate(.92)}';
+            document.head.appendChild(s);
+            return 'ok';
+          })()`);
+          console.log(`[blur] video ${plan.blurVideo}px -> ${r}`);
+        }
         await setCursor(cx, cy);
         await sleep(400);
       } else if (step.wait) {

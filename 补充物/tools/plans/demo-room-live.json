@@ -1,0 +1,11 @@
+{
+  "name": "room-live",
+  "viewport": { "width": 1440, "height": 810 },
+  "out": "docs/demo-room-live.mp4",
+  "blurVideo": 18,
+  "steps": [
+    { "goto": "http://localhost:5173/consult/ord-0001/room", "settle": 24000 },
+    { "move": { "selector": ".consult-room__stage" }, "pause": 2500 },
+    { "move": { "selector": ".consult-room__local" }, "pause": 2500 }
+  ]
+}
