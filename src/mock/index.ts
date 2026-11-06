@@ -1,6 +1,7 @@
 import { createMockAdapter } from './adapter'
 import { consultRoutes } from './consult'
 import { dictRoutes } from './dict'
+import { roomRoutes } from './room'
 
 /**
  * 契约级 Mock 入口（A1 / K-06）。
@@ -18,4 +19,4 @@ import { dictRoutes } from './dict'
 export const mockEnabled = import.meta.env.VITE_USE_MOCK !== 'false'
 
 /** 装配好的 adapter，供 src/api/request.ts 之外的地方复用 */
-export const mockAdapter = createMockAdapter([...dictRoutes, ...consultRoutes])
+export const mockAdapter = createMockAdapter([...dictRoutes, ...consultRoutes, ...roomRoutes])

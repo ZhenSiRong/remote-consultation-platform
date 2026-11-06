@@ -1,0 +1,39 @@
+{
+  "name": "room-demo",
+  "viewport": { "width": 1600, "height": 900 },
+  "out": "docs/demo-room.mp4",
+  "steps": [
+    { "goto": "http://localhost:5173/consult/ord-0001/room/precheck", "settle": 3500 },
+    { "waitFor": { "selector": ".room-precheck__join", "timeout": 8000 } },
+    { "wait": 2600 },
+
+    { "move": { "selector": ".room-precheck__join" }, "pause": 600 },
+    { "click": { "selector": ".room-precheck__join" }, "pause": 500 },
+    { "waitFor": { "selector": ".consult-room", "timeout": 10000 } },
+    { "wait": 2200 },
+
+    { "move": { "selector": ".room-controls__btn--record" }, "pause": 700 },
+    { "click": { "selector": ".room-controls__btn--record" }, "pause": 600 },
+    { "waitFor": { "selector": ".el-dialog", "timeout": 8000 } },
+    { "wait": 1200 },
+    { "move": { "text": "我知道了" }, "pause": 500 },
+    { "click": { "text": "我知道了" }, "pause": 900 },
+
+    { "move": { "selector": ".room-sidebar__tab:nth-of-type(2)" }, "pause": 550 },
+    { "click": { "selector": ".room-sidebar__tab:nth-of-type(2)" }, "pause": 900 },
+
+    { "click": { "selector": ".room-chat__input input" }, "pause": 400 },
+    { "type": { "selector": ".room-chat__input input", "value": "收到，请开始汇报" }, "pause": 500 },
+    { "move": { "text": "发送" }, "pause": 450 },
+    { "click": { "text": "发送" }, "pause": 1300 },
+
+    { "move": { "selector": ".room-sidebar__tab:nth-of-type(3)" }, "pause": 550 },
+    { "click": { "selector": ".room-sidebar__tab:nth-of-type(3)" }, "pause": 1800 },
+
+    { "move": { "selector": ".room-sidebar__tab:nth-of-type(1)" }, "pause": 500 },
+    { "click": { "selector": ".room-sidebar__tab:nth-of-type(1)" }, "pause": 1400 },
+
+    { "move": { "selector": ".room-controls__btn--hangup" }, "pause": 750 },
+    { "click": { "selector": ".room-controls__btn--hangup" }, "pause": 1800 }
+  ]
+}

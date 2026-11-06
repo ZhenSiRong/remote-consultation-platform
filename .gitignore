@@ -55,3 +55,6 @@ screenshots/_tmp/
 
 # 录屏中间帧（只保留成片 docs/demo.mp4）
 docs/.record-tmp/
+
+# CDP 截图/录屏的临时 Chrome profile
+.tmp-shots/

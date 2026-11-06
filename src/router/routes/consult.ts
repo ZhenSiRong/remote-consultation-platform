@@ -27,6 +27,25 @@ const consultRoutes: RouteRecordRaw[] = [
     // 发起会诊是契约里真实存在的权限点，必须引用常量而不是手抄字符串
     meta: { title: '发起会诊', permission: PERMISSIONS.CONSULTATION_CREATE, keepAlive: false },
   },
+  /**
+   * 会诊室相关路由必须排在 `/consult/:id` 之前。
+   * `/consult/:id/room` 段数比 `/consult/:id` 多，理论上不会冲突；
+   * 但 `/consult/:id/room/precheck` 与 `/consult/:id/room` 是前缀关系，
+   * 靠声明顺序保证「更具体的在前」，与 `/consult/create` 同理——
+   * 一旦有人把 :id 挪到前面，'room' 会被当成工单 id 吃掉，会诊室直接打不开。
+   */
+  {
+    path: '/consult/:id/room/precheck',
+    name: 'ConsultRoomPrecheck',
+    component: () => import('@/views/consult/RoomPrecheck.vue'),
+    meta: { title: '设备检测', keepAlive: false },
+  },
+  {
+    path: '/consult/:id/room',
+    name: 'ConsultRoom',
+    component: () => import('@/views/consult/ConsultRoom.vue'),
+    meta: { title: '会诊室', keepAlive: false },
+  },
   {
     path: '/consult/:id',
     name: 'ConsultDetail',
