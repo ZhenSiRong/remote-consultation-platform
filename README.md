@@ -8,7 +8,7 @@
 
 ## 演示
 
-完整录屏（58 秒，含鼠标轨迹）：[docs/demo.mp4](https://cdn.jsdelivr.net/gh/zhensirong/remote-consultation-platform@main/docs/demo.mp4)
+完整录屏（58 秒，含鼠标轨迹）：[docs/demo.mp4](https://cdn.jsdelivr.net/gh/ZhenSiRong/remote-consultation-platform@master/docs/demo.mp4)
 
 录屏里红色圆环是注入的光标指示器，点击时落点炸开红色涟漪——不是后期加的特效，是 `补充物/tools/record.mjs` 在 CDP 层注入的 DOM，配合缓动插值的鼠标轨迹，让「点了哪里、点了什么」在无声视频里也能看清。
 
