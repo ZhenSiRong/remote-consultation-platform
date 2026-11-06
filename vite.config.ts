@@ -20,5 +20,19 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    proxy: {
+      /*
+       * 信令必须打到真后端（3000）。
+       * 不能用 axios 走 mock：src/api/request.ts 里挂的是 axios adapter，
+       * 拦不到原生 fetch / EventSource，而信令正是这两者。
+       * rewrite 去掉 /api：后端控制器路径是 rtc/signal（server 没加全局前缀），
+       * 若后端改成带 /api 的前缀，这里删掉 rewrite 即可，两端只需对上一边。
+       */
+      '/api/rtc': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
   },
 })

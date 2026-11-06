@@ -44,7 +44,7 @@
 |---|---|---|
 | **课程图纸** | 四部曲：需求调研 → 布局调查与设计 → 软件升级七步法 → 方法论迁移 | 文档级完成，见第 10 节 |
 | **契约包** | `shared/`：71 个 Zod schema、54 个类型、12 个权限点、66 格角色矩阵、23 个错误码、5 组字典、3 个外部能力 port | 完成，两端共用 |
-| **可运行原型** | 会诊工单域完整闭环 + 视频会诊室：列表 → 详情 → 状态流转 → 发起 → 合规拦截 → 会前检测 → 会中协作 → 结束小结 | 本仓库主体 |
+| **可运行原型** | 会诊工单域完整闭环 + 视频会诊室（真实 WebRTC P2P）：列表 → 详情 → 状态流转 → 发起 → 合规拦截 → 会前检测 → 会中协作 → 结束小结 | 本仓库主体 |
 
 为什么要先有契约包：前后端如果各写一份类型，接口一改就是两处改、两处漏。`shared/` 是同一份 Zod schema，前端 `import type` 拿类型、运行时 `parse()` 做校验，后端将来直接拿同一个包做 DTO 校验。**mock 也必须过 schema**——数据字段对不上要在模块加载时当场炸，而不是等页面显示 `undefined` 才发现。
 
@@ -53,16 +53,20 @@
 ```bash
 npm install                 # 一次装齐前端 + shared + server
 npm run build:shared        # shared 是 CJS 构建产物，server 端要它
-npm run dev                 # http://localhost:5173
+npm run dev                 # 终端 1：前端 http://localhost:5173
+npm run dev:server          # 终端 2：后端 http://localhost:3000（视频会诊室需要）
 ```
 
-只有三条命令。不需要数据库、不需要后端进程——mock 是 axios adapter，挂在请求实例上，`VITE_USE_MOCK=false` 一行即可切到真后端。
+前三条就能跑完整个工单闭环——mock 是 axios adapter，挂在请求实例上，不需要后端。**只有视频会诊室要连真后端**（信令走 SSE/POST，绕开 axios，mock 拦不到），所以第 4 条只在需要看真实视频时启动。
+
+不需要数据库、不需要配置。`VITE_USE_MOCK=false` 一行即可把工单接口切到真后端。
 
 自检：
 
 ```bash
-npm run typecheck           # shared + 前端 vue-tsc
-node 补充物/tools/verify.mjs   # 18 项端到端断言（需 dev 已启动）
+npm run typecheck              # shared + 前端 vue-tsc
+node 补充物/tools/verify.mjs      # 18 项工单闭环断言（需 dev 已启动）
+node 补充物/tools/verify-rtc.mjs  # 7 项 WebRTC 断言（需 dev + server 都启动）
 ```
 
 ## 3. 功能演示
@@ -149,6 +153,33 @@ node 补充物/tools/verify.mjs   # 18 项端到端断言（需 dev 已启动）
 
 **结束会诊**：填会诊结论、诊疗建议、是否需要随访（三项必填），确认后工单转「待签署」，会场同时关闭。小结内容本切片不落库（记录域接口在 W7），只走状态流转。
 
+### 3.5 真实音视频：A 档 P2P
+
+![](docs/screenshots/12-room-webrtc.png)
+
+上图是真的视频画面——绿色是 Chrome 的 fake camera（测试设备），不是模拟图。两端各自 `state === 'connected'`，远端流里 `audio + video` 两条轨都在，`videoWidth` 非零说明帧真的解码出来了。
+
+**信令为什么不用 WebSocket**：`server/` 原本没有任何 `ws` / `socket.io` 依赖，为了不引入新包，信令走 **SSE（收）+ POST（发）** 纯 HTTP：`GET /rtc/signal/stream` 保持长连接接收，`POST /rtc/signal` 发送 SDP/ICE。信令本身是低频的（一次会诊几十条），SSE 完全够用，而且浏览器原生 `EventSource` 自带断线重连。
+
+**一个必须分开的东西：业务身份 ≠ 信令身份**。
+
+| 用途 | 取值 | 为什么 |
+|---|---|---|
+| 业务身份 | `host-local`（固定） | 参会方列表标「(你)」、HOST 权限判断 |
+| 信令身份 | `host-local-${6位随机}`（每次加载一个） | 服务端房间表是 `Map<participantId, conn>`，两个标签同 id 会互相顶掉 |
+
+这个坑很阴：被顶掉的那条连接**不报错也不关闭**，只是再也收不到帧。现场表现是「两个人都显示在线，对面永远是黑的」。
+
+**验证方法**（不是看页面有没有报错）：
+
+```bash
+node 补充物/tools/verify-rtc.mjs
+```
+
+脚本开两个独立浏览器实例（带 `--use-fake-device-for-media-stream`），各自加载会诊室，然后从 WebRTC 层面判定：信令房间有 2 个唯一连接、两端都有远端 `<video>`、`videoWidth > 0`（真的解码出帧，而不只是挂了个空流）、断开后房间回收。当前 **7/7 通过**。
+
+**能力边界**：只支持 2 方、无 TURN（对称 NAT 连不上）、无服务端录制、无 Simulcast。什么时候必须升级到云 SDK 或自建 SFU，见 [`补充物/RTC接入指南.md`](补充物/RTC接入指南.md)——里面有升级判据、接入点、成本表和迁移时哪些文件一行不用改。
+
 ## 4. 状态机：唯一的业务真相
 
 7 个主态，`shared/src/dict/consult-status.ts` 是唯一来源：
@@ -231,17 +262,21 @@ HTTP 状态码只承载传输与会话层语义（401/403/429/5xx），**业务�
 │   ├── api/                 # request 层（traceId + code 分流）+ 13 个业务函数（工单 6 + 会场 7）
 │   ├── mock/                # axios adapter + 12 条工单种子 + 4 人会场 + 14 个 handler
 │   ├── domain/              # 状态机 / 脱敏 / 权限 / 留痕动作 / 会场在线态
+│   ├── composables/         # useRtc（WebRTC P2P 与信令）/ usePermission
 │   ├── components/          # 10 个基础积木 + 4 个业务组件（动作条 / 合规面板 / 侧栏 / 结束弹窗）
 │   ├── views/               # 9 个页面（工单 3 页 + 会诊室 2 页 + 其余占位）
 │   ├── layouts/             # 四层骨架：顶栏 / 侧栏 / 主区 / 状态栏
 │   ├── router/              # 8 条路由 + 守卫 + 菜单
 │   └── styles/              # tokens.css（全仓唯一允许出现十六进制的地方）
-├── server/                  # NestJS 脚手架（8 模块，本期不动）
+├── server/                  # NestJS：/health + 8 个域模块（空壳）+ RTC 信令（已实现）
+│   └── src/modules/rtc/     # SSE + POST 信令，内存房间表
 ├── 交付物/                   # 课程要求的四部曲文档
-├── 补充物/                   # WBS / 架构决策 / 工具链
+├── 补充物/                   # WBS / 架构决策 / RTC 指南 / 工具链
+│   ├── RTC接入指南.md        # B/C 档升级路径（给后人的交接文档）
 │   └── tools/
 │       ├── record.mjs       # 带鼠标轨迹的录屏引擎
-│       ├── verify.mjs       # 18 项端到端验收
+│       ├── verify.mjs       # 18 项工单闭环验收
+│       ├── verify-rtc.mjs   # 7 项 WebRTC 验收（双浏览器实例）
 │       ├── shoot.mjs        # 截图引擎
 │       └── docx2md.py       # docx → md 转换
 └── docs/
@@ -262,7 +297,10 @@ HTTP 状态码只承载传输与会话层语义（401/403/429/5xx），**业务�
 | ⚠️ 权限点只有 create/invite | `shared` 的 consult 段只有这两个 | 动作可见性由**状态机**控制，不由权限点控制 |
 | ⚠️ 受邀方名称走字典接口 | 契约里只有 `invitedOrgId`，没有名称字段 | 字典拉取失败时回落显示 ID，不影响详情渲染 |
 | ⚠️ 发起人 `usr-*` 显示裸 ID | 医生字典里没有这个 id | 属预期行为，不是 bug |
-| ⚠️ 视频画面是占位 | 没接真实 RTC，`ports/rtc-provider.ts` 只定接口 | 主画面是深色底 + 首字头像，不是真实视频流 |
+| ⚠️ 视频只支持 2 方 P2P | A 档实现，无 SFU | 第 3 人进入会替换第 2 人；多学科会诊需升 B/C 档 |
+| ⚠️ 无 TURN | 只配了公共 STUN | 对称 NAT / 严格企业防火墙下两端连不上 |
+| ⚠️ 信令无鉴权 | 知道 roomId 即可入会 | 上线前必须补 token 校验与留痕 |
+| ⚠️ 信令房间表在内存 | 服务重启丢房间 | 多实例部署需 Redis pub/sub |
 | ⚠️ 摄像头需浏览器授权 | `getUserMedia` 走浏览器权限 | 拒绝授权或 headless 环境会走降级路径（旁听身份进入） |
 | ⚠️ 会场消息不落库 | 消息只在前端内存 | 刷新后回到预置的 3 条 |
 | ⚠️ 会诊小结不落库 | 记录域接口在 W7 | 结束会诊只走状态流转，结论/建议/随访不入库 |
@@ -272,7 +310,7 @@ HTTP 状态码只承载传输与会话层语义（401/403/429/5xx），**业务�
 
 ## 9. 非目标
 
-- 不做真实音视频传输（`ports/rtc-provider.ts` 只定接口；会诊室的界面、参会方状态、控场、录制流程是真的，画面是占位）
+- 不做多方 SFU 与云 SDK（A 档只做 2 方 P2P；升级路径、成本、验收判据见 [`补充物/RTC接入指南.md`](补充物/RTC接入指南.md)）
 - 不做 DICOM 影像解析（`ports/dicom-provider.ts` 同理）
 - 不做电子签名（`ports/signature-provider.ts` 同理）
 - 不做患者端（本期只做医护侧，患者端 story 已移出）

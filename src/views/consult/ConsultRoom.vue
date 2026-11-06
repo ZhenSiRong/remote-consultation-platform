@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { Room, RoomParticipant } from '@/api/types'
@@ -18,6 +18,7 @@ import { EmptyState } from '@/components/EmptyState'
 import RoomSidebar from '@/components/room/RoomSidebar.vue'
 import RoomEndDialog from '@/components/room/RoomEndDialog.vue'
 import { useRoomStore } from '@/store/modules/room'
+import { useRtc } from '@/composables/useRtc'
 
 /**
  * 会诊室（视频会诊进行中）。
@@ -28,8 +29,9 @@ import { useRoomStore } from '@/store/modules/room'
  * 不做滚动页面，避免会诊途中为了找按钮而滚动、错过对方说话。
  *
  * 关键取舍：
- * 1. **不接真实 RTC**。演示环境没有媒体服务器，画面用「深色底 + 头像 + 在线态」占位，
- *    但 presence / 录制 / 媒体开关全部走真实接口与轮询，页面分支与真接入时一致。
+ * 1. **音视频真实直连**。主画面/本地小窗都绑真实 MediaStream（见 useRtc），
+ *    但只有「2 方 P2P」：房间里的第三人会把前一路顶掉，这是 A 档的能力边界。
+ *    没有摄像头 / 服务端没起时仍然回落到占位画面，会场本身不因此进不来。
  * 2. **room 只在接口里**。轮询每 2 秒拉一次整份 Room，本地不复制一份权威态，
  *    否则静音别人之后「成员卡片已灰、底部开关还亮」的自相矛盾必然出现（与 store 注释同源）。
  * 3. **轮询失败不弹 toast**。网络抖动在会场里是常态，弹窗会把用户从会诊中拽出来；
@@ -83,10 +85,35 @@ const micPending = ref(false)
 const cameraPending = ref(false)
 const recordPending = ref(false)
 
-const localStream = ref<MediaStream | null>(null)
-const cameraReady = ref(false)
-const localVideoEl = ref<HTMLVideoElement | null>(null)
-const mainVideoEl = ref<HTMLVideoElement | null>(null)
+/**
+ * 真实音视频直连（A 档：2 方 P2P，无媒体服务器）。
+ * 信令 roomId 用会诊单 id 而不是会场 id：两者一对一，但信令属于「会话」层，
+ * 跟着会诊单走，会场被重建时（重开、换主持人）连接路径不用跟着变。
+ * 拆成 ref 而不是保留 rtc.xxx：模板只自动解包顶层 ref，写成 rtc.remoteStream 会拿不到值。
+ */
+const {
+  localStream,
+  remoteStream,
+  state: rtcState,
+  error: rtcError,
+  setLocalAudioEnabled,
+  setLocalVideoEnabled,
+  hangup: rtcHangup,
+  reconnect: rtcReconnect,
+} = useRtc({ roomId: () => consultationId.value || null })
+
+/** 摄像头是否真的出画面：无设备时流里只有音轨，此时仍要显示占位而不是一块黑 */
+const hasLocalVideo = computed(() => (localStream.value?.getVideoTracks().length ?? 0) > 0)
+
+/**
+ * rtcError 里的都是「要让人知道，但不必打断会诊」的事：授权被拒、信令没起、
+ * 第三人顶掉了这路视频。用 toast 承载，不占主画面；需要用户动手的（连接失败）另有页内占位 + 重试。
+ */
+watch(rtcError, (message) => {
+  if (message) {
+    ElMessage.warning(message)
+  }
+})
 
 /** 卸载后所有异步回调都不许再写 ref，否则会在已销毁的组件上触发更新 */
 let disposed = false
@@ -195,60 +222,6 @@ function refreshNetwork(): void {
       : 'good'
 }
 
-// ---------------------------------------------------------------- 摄像头
-
-/**
- * 申请本地摄像头。
- * 失败是常态（headless 环境没有设备、用户拒绝授权、设备被占用），
- * 所以任何失败都只降级成占位，不阻断会场——旁听也比进不来强。
- */
-async function ensureCamera(): Promise<void> {
-  if (!store.localCameraOn || localStream.value || !navigator.mediaDevices?.getUserMedia) {
-    return
-  }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-    if (disposed) {
-      // 申请期间页面已经卸载：立刻释放，否则摄像头指示灯会一直亮着
-      stream.getTracks().forEach((track) => track.stop())
-      return
-    }
-    localStream.value = stream
-    cameraReady.value = true
-  } catch {
-    cameraReady.value = false
-  }
-}
-
-function stopLocalStream(): void {
-  localStream.value?.getTracks().forEach((track) => track.stop())
-  localStream.value = null
-  cameraReady.value = false
-}
-
-/** 把同一条流挂到两个 <video>（主画面 / 小窗）上；元素由 v-if 控制，切换后需要重新挂 */
-async function attachStreams(): Promise<void> {
-  await nextTick()
-  const stream = localStream.value
-  for (const el of [localVideoEl.value, mainVideoEl.value]) {
-    if (!el) {
-      continue
-    }
-    el.srcObject = stream
-    if (stream) {
-      try {
-        await el.play()
-      } catch {
-        // 自动播放被浏览器拦截时画面暂时黑屏，但占位与状态标签仍正确，不做额外提示
-      }
-    }
-  }
-}
-
-watch([localStream, mainIsSelf], () => {
-  void attachStreams()
-})
-
 // ---------------------------------------------------------------- 会场数据
 
 function describeError(error: unknown, fallback: string): string {
@@ -305,9 +278,6 @@ async function loadRoom(): Promise<void> {
     pollFailures.value = 0
     syncLocalStateFromRoom(next)
     startPolling()
-    if (store.localCameraOn) {
-      void ensureCamera()
-    }
   } catch (error) {
     if (!disposed) {
       loadError.value = describeError(error, '会场加载失败，请稍后重试')
@@ -336,7 +306,8 @@ async function pollRoom(): Promise<void> {
     pollFailures.value = 0
     if (next.status === 'CLOSED') {
       stopPolling()
-      stopLocalStream()
+      // 会场已关闭就不该继续占着摄像头，也不该继续挂在信令上等下一轮 offer
+      rtcHangup()
     }
   } catch {
     if (!disposed) {
@@ -361,6 +332,17 @@ function stopPolling(): void {
   }
 }
 
+/**
+ * RTC 的可读错误统一弹一次 toast。
+ * 典型三条：第三人进来顶掉前一路（2 方上限）、设备被拒/被占用、信令连不上。
+ * 放在 toast 而不是占位上：这类信息需要「说一次」，但不需要一直压在画面中央。
+ */
+watch(rtcError, (message) => {
+  if (message && !disposed) {
+    ElMessage.warning(message)
+  }
+})
+
 // ---------------------------------------------------------------- 媒体开关
 
 async function toggleMic(): Promise<void> {
@@ -371,10 +353,18 @@ async function toggleMic(): Promise<void> {
   micPending.value = true
   // 先乐观切换：静音是高频操作，等接口回来再变会让用户以为没点上
   store.localMicMuted = nextMuted
+  /*
+   * 两件事必须都做，缺一不可：
+   * 1. 关本地音频轨 —— 这是对方真的听不到的唯一手段；
+   * 2. 上报接口 —— 后端要记住谁静音了，侧栏成员卡片与「谁在说话」才不是假的。
+   * 只做第 2 条的旧实现，按钮亮了但声音照发，属于演示里最容易被戳穿的那种假。
+   */
+  setLocalAudioEnabled(!nextMuted)
   try {
     room.value = await updateMediaState(room.value.id, selfId, { micMuted: nextMuted })
   } catch (error) {
     store.localMicMuted = !nextMuted
+    setLocalAudioEnabled(nextMuted)
     ElMessage.error(describeError(error, '麦克风状态切换失败，请稍后重试'))
   } finally {
     micPending.value = false
@@ -388,20 +378,13 @@ async function toggleCamera(): Promise<void> {
   const nextOn = !store.localCameraOn
   cameraPending.value = true
   store.localCameraOn = nextOn
-  if (!nextOn) {
-    // 关摄像头必须立刻停轨道：晚停一秒，指示灯就多亮一秒
-    stopLocalStream()
-  }
+  // 只改 track.enabled，不摘轨：摘轨会触发重新协商，对端画面会黑一下再回来
+  setLocalVideoEnabled(nextOn)
   try {
     room.value = await updateMediaState(room.value.id, selfId, { cameraOn: nextOn })
-    if (nextOn) {
-      await ensureCamera()
-    }
   } catch (error) {
     store.localCameraOn = !nextOn
-    if (!nextOn) {
-      await ensureCamera()
-    }
+    setLocalVideoEnabled(!nextOn)
     ElMessage.error(describeError(error, '摄像头状态切换失败，请稍后重试'))
   } finally {
     cameraPending.value = false
@@ -452,7 +435,8 @@ function acknowledgeRecordingNotice(): void {
 
 function stopAll(): void {
   stopPolling()
-  stopLocalStream()
+  // 挂断是幂等的：返回工单和组件销毁都会走到这里，重复调用不会留下副作用
+  rtcHangup()
 }
 
 function goBackToOrder(): void {
@@ -569,6 +553,15 @@ onBeforeUnmount(() => {
             {{ networkLabel }}
           </span>
 
+          <!-- 视频链路是比「网络良好」更硬的证据：网络绿不代表 P2P 通了，所以单独一个点 -->
+          <template v-if="rtcState === 'connected'">
+            <span class="consult-room__divider">·</span>
+            <span class="consult-room__rtc-connected">
+              <i class="consult-room__rtc-dot" aria-hidden="true" />
+              视频已连接
+            </span>
+          </template>
+
           <span v-if="pollFailures >= POLL_FAILURE_LIMIT" class="consult-room__unstable">
             连接不稳定
           </span>
@@ -592,13 +585,24 @@ onBeforeUnmount(() => {
             class="consult-room__remote"
             :class="{ 'consult-room__remote--left': mainPresence === 'LEFT' }"
           >
+            <!--
+              主画面优先真实流：显示自己时绑本地流（必须 muted，否则会自激啸叫），
+              显示对方时绑远端流。没有流才落到下面的占位。
+            -->
             <video
-              v-if="mainIsSelf && store.localCameraOn && cameraReady"
-              ref="mainVideoEl"
+              v-if="mainIsSelf && store.localCameraOn && hasLocalVideo"
               class="consult-room__remote-video"
               autoplay
               muted
               playsinline
+              :srcObject="localStream"
+            />
+            <video
+              v-else-if="!mainIsSelf && remoteStream"
+              class="consult-room__remote-video"
+              autoplay
+              playsinline
+              :srcObject="remoteStream"
             />
 
             <!--
@@ -618,7 +622,36 @@ onBeforeUnmount(() => {
               </p>
             </template>
 
-            <p v-else-if="!mainParticipant" class="consult-room__remote-empty">暂无在场参会方</p>
+            <!--
+              「暂无在场参会方」与连接态互斥：正在连的时候说「没人」会让人以为连错了地方，
+              所以连接中/失败时只说连接的事。
+            -->
+            <p
+              v-else-if="!mainParticipant && rtcState !== 'connecting' && rtcState !== 'failed'"
+              class="consult-room__remote-empty"
+            >
+              暂无在场参会方
+            </p>
+
+            <!--
+              连接状态只叠在占位上：有真实画面时不加任何提示，画面本身就是最好的状态。
+              connecting 用转圈，failed 给重试入口——会场里没有别的地方能让用户自救。
+            -->
+            <div
+              v-if="!mainIsSelf && !remoteStream && rtcState === 'connecting'"
+              class="consult-room__rtc-hint"
+            >
+              <span class="consult-room__spinner" aria-hidden="true" />
+              <p class="consult-room__rtc-text">正在建立视频连接…</p>
+            </div>
+            <div
+              v-else-if="!mainIsSelf && !remoteStream && rtcState === 'failed'"
+              class="consult-room__rtc-hint"
+            >
+              <p class="consult-room__rtc-text">视频连接失败</p>
+              <p v-if="rtcError" class="consult-room__rtc-sub">{{ rtcError }}</p>
+              <el-button size="small" type="primary" plain @click="rtcReconnect">重试</el-button>
+            </div>
 
             <span v-if="mainParticipant" class="consult-room__role-tag">{{ mainRoleLabel }}</span>
 
@@ -649,12 +682,12 @@ onBeforeUnmount(() => {
           >
             <template v-if="!mainIsLocal">
               <video
-                v-if="store.localCameraOn && cameraReady"
-                ref="localVideoEl"
+                v-if="store.localCameraOn && hasLocalVideo"
                 class="consult-room__local-video"
                 autoplay
                 muted
                 playsinline
+                :srcObject="localStream"
               />
               <span v-else class="consult-room__local-placeholder">
                 <span class="consult-room__avatar consult-room__avatar--sm">{{ selfInitial }}</span>
@@ -942,8 +975,22 @@ onBeforeUnmount(() => {
   background: var(--status-warning);
 }
 
-.consult-room__unstable {
-  padding: 2px 8px;
+/* 视频已连接：与网络态用同一个绿点语言，但文案独立——「网通」不等于「P2P 通」 */
+.consult-room__rtc-connected {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--status-active);
+}
+
+.consult-room__rtc-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--status-active);
+}
+
+.consult-room__unstable {  padding: 2px 8px;
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--status-warning) 14%, var(--color-bg-container));
   color: var(--status-warning);
@@ -1042,6 +1089,30 @@ onBeforeUnmount(() => {
   margin: 0;
   font-size: var(--font-size-base);
   color: rgba(255, 255, 255, 0.6);
+}
+
+/* 连接中/连接失败：放在占位下方而不是盖满全屏，断线时头像和姓名仍然可读 */
+.consult-room__rtc-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+  color: var(--color-text-inverse);
+  text-align: center;
+}
+
+.consult-room__rtc-text {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.consult-room__rtc-sub {
+  max-width: 320px;
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.56);
 }
 
 /* 角色标签浮在右上角：不抢画面中心，但一眼能看出谁是发言人 */

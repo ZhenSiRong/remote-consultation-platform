@@ -9,6 +9,7 @@ import { ConsultModule } from './modules/consult/consult.module'
 import { EmrModule } from './modules/emr/emr.module'
 import { OrgModule } from './modules/org/org.module'
 import { RecordModule } from './modules/record/record.module'
+import { RtcModule } from './modules/rtc/rtc.module'
 
 /**
  * 根模块：只做装配，不写业务。
@@ -25,6 +26,8 @@ import { RecordModule } from './modules/record/record.module'
     RecordModule,
     ColModule,
     AuditModule,
+    // 信令不属于那 8 个业务域，但视频会诊室要用，故单独注册（无状态、无 Prisma 依赖）
+    RtcModule,
   ],
   controllers: [AppController],
 })
