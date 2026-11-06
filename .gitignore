@@ -1,0 +1,54 @@
+# ---------- Node / 前端产物 ----------
+node_modules/
+dist/
+dist-ssr/
+build/
+.output/
+.vite/
+.cache/
+*.local
+
+# 包管理器
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# ---------- 日志 / 临时 ----------
+logs/
+*.log
+tmp/
+temp/
+*.tsbuildinfo
+
+# ---------- 测试 / 覆盖率 ----------
+coverage/
+.nyc_output/
+
+# ---------- IDE / 编辑器 ----------
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.iml
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ---------- 操作系统 ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- 本项目专用 ----------
+# 抓取脚本临时产物
+screenshots/_tmp/

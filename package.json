@@ -1,0 +1,49 @@
+{
+  "name": "remote-consultation-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "dev:server": "npm run start:dev -w server",
+    "dev:shared": "npm run dev -w shared",
+    "dev:all": "concurrently -n web,api,contract -c cyan,magenta,yellow \"npm:dev\" \"npm:dev:server\" \"npm:dev:shared\"",
+    "build": "npm run build -w shared && npm run build -w server && vue-tsc -b && vite build",
+    "build:shared": "npm run build -w shared",
+    "build:server": "npm run build -w server",
+    "build:web": "vue-tsc -b && vite build",
+    "typecheck": "npm run typecheck -w shared && vue-tsc --noEmit -p tsconfig.json",
+    "typecheck:all": "npm run typecheck -w shared && npm run typecheck -w server && vue-tsc --noEmit -p tsconfig.json",
+    "lint": "eslint . --max-warnings 0"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "axios": "^1.20.0",
+    "echarts": "^6.1.0",
+    "element-plus": "^2.14.7",
+    "pinia": "^4.1.0",
+    "vue": "^3.5.44",
+    "vue-router": "^5.4.0",
+    "vxe-pc-ui": "^4.20.18",
+    "vxe-table": "^4.23.4",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "concurrently": "^10.0.6",
+    "eslint": "^9.21.0",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-vue": "^10.11.1",
+    "globals": "^17.13.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.72.0",
+    "vite": "^8.3.5",
+    "vue-tsc": "^3.3.13"
+  }
+}

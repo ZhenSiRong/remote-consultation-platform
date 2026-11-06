@@ -1,0 +1,29 @@
+{
+  "name": "openemr",
+  "viewport": { "width": 1440, "height": 900 },
+  "steps": [
+    { "goto": "https://demo.openemr.io/openemr/interface/login/login.php?site=default" },
+    { "wait": 3000 },
+    { "shot": "screenshots/openemr/01_login.png" },
+    { "fill": { "selector": "input[name='authUser']", "value": "admin" } },
+    { "fill": { "selector": "input[name='clearPass']", "value": "pass" } },
+    { "click": { "selector": "button[type='submit']" } },
+    { "wait": 7000 },
+    { "shot": "screenshots/openemr/02_main_calendar.png" },
+
+    { "goto": "https://demo.openemr.io/openemr/interface/main/finder/dynamic_finder.php" },
+    { "wait": 5000 },
+    { "js": "document.title + ' | ' + location.href" },
+    { "shot": "screenshots/openemr/03_patient_finder.png" },
+
+    { "goto": "https://demo.openemr.io/openemr/interface/patient_file/summary/demographics.php?set_pid=1" },
+    { "wait": 6000 },
+    { "js": "document.title + ' | ' + location.href" },
+    { "shot": "screenshots/openemr/04_patient_dashboard.png" },
+
+    { "goto": "https://demo.openemr.io/openemr/interface/patient_file/history/encounters.php?set_pid=1" },
+    { "wait": 5000 },
+    { "js": "document.title + ' | ' + location.href" },
+    { "shot": "screenshots/openemr/05_patient_visits.png" }
+  ]
+}

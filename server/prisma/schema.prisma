@@ -1,0 +1,18 @@
+// 远程会诊平台 · Prisma schema（B-01 只放占位，B-06 才建表）
+// 定稿：PostgreSQL 16（决策 B-02）。开发/测试同一 Docker 镜像，不用 SQLite（架构决策.md:675）。
+// 本步刻意不写任何 model：迁移基线、6 域主表、audit schema 与分区/触发器/REVOKE 手写 SQL 都在 B-06。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// TODO(B-06)：
+//   1. 6 域主表 + audit schema 占位；首个 migration `migrate deploy` 成功
+//   2. 两个 role：app_rw（业务读写）、app_audit_w（audit.audit_log 仅 INSERT/SELECT）
+//   3. 手写 SQL 迁移插入 PG 专有 DDL：按月分区（ts RANGE）、BEFORE UPDATE/DELETE 触发器、REVOKE
+//   4. 回退判定：若分区/触发器/列级授权无法用 Prisma 表达 → 触发决策 B-03 回退到 Kysely，结论写附录 C

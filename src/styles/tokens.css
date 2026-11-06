@@ -1,0 +1,16 @@
+/* ==========================================================================
+   设计令牌（K-02 落地）
+   本文件是全仓唯一允许出现十六进制色值的地方；组件内只写 var(--xxx)。
+   TODO(K-02)：
+     - 主色 --color-primary #1677ff
+     - 7 个状态 token：--status-neutral / info / warning / active / pending-sign / success / danger
+     - 间距 8 的倍数、圆角 4|8px、字号 14/16/20
+   ========================================================================== */
+
+:root {
+  /* 四层骨架几何（README 3.1）：仅尺寸，不含色值 */
+  --layout-header-h: 56px;
+  --layout-sider-w: 208px;
+  --layout-sider-collapsed-w: 64px;
+  --layout-footer-h: 32px;
+}

@@ -1,0 +1,25 @@
+{
+  "name": "bahmni",
+  "viewport": { "width": 1440, "height": 900 },
+  "steps": [
+    { "goto": "https://demo.standard.mybahmni.in/bahmni/home" },
+    { "wait": 7000 },
+    { "shot": "screenshots/bahmni/01_login.png" },
+    { "fill": { "selector": "#username", "value": "superman" } },
+    { "fill": { "selector": "#password", "value": "Admin123" } },
+    { "js": "(()=>{const b=[...document.querySelectorAll('button')].find(x=>/login/i.test(x.textContent)); if(b){b.click(); return 'clicked';} return 'notfound';})()" },
+    { "wait": 10000 },
+    { "shot": "screenshots/bahmni/02_login_location.png" },
+    { "js": "(()=>{const s=document.querySelector('select'); if(!s) return 'no-select'; const opt=[...s.options].find(o=>o.value && !/select location/i.test(o.text)); if(!opt) return 'no-opt:'+[...s.options].map(o=>o.text).join(','); s.value=opt.value; s.dispatchEvent(new Event('change',{bubbles:true})); return 'set:'+opt.text;})()" },
+    { "wait": 1500 },
+    { "js": "(()=>{const b=[...document.querySelectorAll('button')].find(x=>/continue/i.test(x.textContent)); if(b){b.click(); return 'clicked';} return 'notfound';})()" },
+    { "wait": 12000 },
+    { "js": "document.title + ' | ' + location.href" },
+    { "shot": "screenshots/bahmni/03_clinical_dashboard.png" },
+    { "js": "JSON.stringify([...document.querySelectorAll('.left-menu a, .menu a, nav a, .secondary-button, .dashboard-section-title')].map(a=>a.textContent.trim().slice(0,40)).filter(Boolean).slice(0,40))" },
+    { "goto": "https://demo.standard.mybahmni.in/bahmni/clinical/#/search" },
+    { "wait": 6000 },
+    { "js": "document.title + ' | ' + location.href" },
+    { "shot": "screenshots/bahmni/04_search.png" }
+  ]
+}

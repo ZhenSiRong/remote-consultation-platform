@@ -1,0 +1,27 @@
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font-size: var(--font-size-base, 14px);
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  background: var(--color-bg-page);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
