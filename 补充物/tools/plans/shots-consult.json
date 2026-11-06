@@ -1,0 +1,37 @@
+{
+  "name": "consult-shots",
+  "viewport": { "width": 1440, "height": 900 },
+  "steps": [
+    { "goto": "http://localhost:5173/consult", "settle": 3200 },
+    { "wait": 900 },
+    { "shot": "docs/screenshots/01-consult-list.png" },
+
+    { "click": { "selector": ".consult-tab:nth-of-type(2)" } },
+    { "wait": 1400 },
+    { "shot": "docs/screenshots/02-consult-pending.png" },
+
+    { "goto": "http://localhost:5173/consult/ord-0001", "settle": 3000 },
+    { "wait": 900 },
+    { "shot": "docs/screenshots/03-consult-detail.png" },
+
+    { "js": "document.querySelector('.action-bar__action--accept').click()" },
+    { "wait": 1500 },
+    { "shot": "docs/screenshots/04-consult-accepted.png" },
+
+    { "js": "document.querySelector('.action-bar__demo').click()" },
+    { "wait": 900 },
+    { "shot": "docs/screenshots/05-consult-20005.png" },
+
+    { "goto": "http://localhost:5173/consult/create", "settle": 3000 },
+    { "wait": 700 },
+    { "shot": "docs/screenshots/06-consult-create.png" },
+
+    { "goto": "http://localhost:5173/consult/create?patientId=pat-1005", "settle": 3200 },
+    { "wait": 900 },
+    { "shot": "docs/screenshots/07-consult-blocked.png" },
+
+    { "js": "document.querySelector('.consult-create__submit').click()" },
+    { "wait": 700 },
+    { "shot": "docs/screenshots/08-consult-20003.png" }
+  ]
+}

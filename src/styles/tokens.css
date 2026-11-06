@@ -1,13 +1,87 @@
 /* ==========================================================================
    设计令牌（K-02 落地）
    本文件是全仓唯一允许出现十六进制色值的地方；组件内只写 var(--xxx)。
-   TODO(K-02)：
-     - 主色 --color-primary #1677ff
-     - 7 个状态 token：--status-neutral / info / warning / active / pending-sign / success / danger
-     - 间距 8 的倍数、圆角 4|8px、字号 14/16/20
-   ========================================================================== */
 
+   命名约定：
+   - --color-*  基础色板（主色 / 文字 / 背景 / 边框）
+   - --status-* 业务状态色，与 shared/src/dict/consult-status.ts 的 token 字段一一对应
+   - 其余为间距 / 圆角 / 字号 / 阴影 / 骨架几何
+
+   为什么不把状态色并进 --color-*：状态色是业务语义（7 态字典）而非通用色板，
+   单独成组后，改状态配色只需动这一组，且能靠命名强制「页面只引用状态 token」。
+   ========================================================================== */
 :root {
+  /* 主色 */
+  --color-primary: #1677ff;
+  --color-primary-hover: #4096ff;
+  --color-primary-active: #0958d9;
+  --color-primary-bg: #e6f4ff;
+
+  /* 文字 */
+  --color-text-primary: #1f2329;
+  --color-text-secondary: #646a73;
+  --color-text-tertiary: #8f959e;
+  --color-text-disabled: #bbbfc4;
+  --color-text-inverse: #ffffff;
+
+  /* 背景 */
+  --color-bg-page: #f5f6f7;
+  --color-bg-container: #ffffff;
+  --color-bg-hover: #f2f3f5;
+  --color-bg-active: #e8eaed;
+
+  /* 边框 */
+  --color-border: #dee0e3;
+  --color-border-light: #eff0f1;
+
+  /* ------------------------------------------------------------------
+     7 个状态 token —— 与 shared/src/dict/consult-status.ts 的 token 字段一一对应。
+     注意：--status-success（已归档）与 --status-active（进行中）**故意同色**。
+     依据 3.3B「区分度补丁」：不新增颜色，已归档靠 CHECK_DIM（对勾图标 + 文字
+     不透明度 0.75）与进行中的 BREATHING_DOT（呼吸圆点）在形状上区分。
+     若有人想把两者改成不同色，先改 shared 字典，不要在组件里绕开 token。
+     ------------------------------------------------------------------ */
+  --status-neutral: #8f959e; /* 待受理 */
+  --status-info: #1677ff; /* 已受理 */
+  --status-warning: #ff8800; /* 排期/待开始 */
+  --status-active: #00b42a; /* 进行中 */
+  --status-pending-sign: #7b61ff; /* 待签署 */
+  --status-success: #00b42a; /* 已归档（与进行中同色，靠 CHECK_DIM 形状区分） */
+  --status-danger: #f53f3f; /* 已作废 */
+
+  /* 间距（8 的倍数体系，xs/sm 为 4/8 的微调档） */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-full: 999px;
+
+  /* 字号 */
+  --font-size-xs: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  /* ------------------------------------------------------------------
+     补充分组：骨架与通用组件已引用、但不在基础色板里的令牌。
+     集中在此补齐，避免组件里出现「引用了不存在的变量 → 样式静默落空」。
+     ------------------------------------------------------------------ */
+  --color-bg-sider: #ffffff; /* 侧栏与内容同底，靠 --color-border-light 分隔 */
+  --color-bg-muted: #f7f8fa; /* 空态插画底、只读区块底，比 hover 更浅一档 */
+  --color-bg-table-header: #fafafa;
+  --font-size-sm: 13px; /* 标签、表格正文等紧凑场景，介于 xs 与 base 之间 */
+
   /* 四层骨架几何（README 3.1）：仅尺寸，不含色值 */
   --layout-header-h: 56px;
   --layout-sider-w: 208px;

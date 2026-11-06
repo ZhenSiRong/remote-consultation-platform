@@ -1,0 +1,195 @@
+{
+  "name": "consult-demo",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "out": "docs/demo.mp4",
+  "steps": [
+    {
+      "goto": "http://localhost:5173/consult",
+      "settle": 3200
+    },
+    {
+      "waitFor": {
+        "selector": ".pro-table__row",
+        "timeout": 6000
+      }
+    },
+    {
+      "wait": 700
+    },
+    {
+      "move": {
+        "selector": ".consult-tab:nth-of-type(2)"
+      },
+      "pause": 550
+    },
+    {
+      "click": {
+        "selector": ".consult-tab:nth-of-type(2)"
+      },
+      "pause": 300
+    },
+    {
+      "waitFor": {
+        "selector": ".pro-table__row",
+        "timeout": 6000
+      }
+    },
+    {
+      "wait": 1000
+    },
+    {
+      "click": {
+        "selector": ".consult-list input[placeholder*='患者姓名']"
+      },
+      "pause": 350
+    },
+    {
+      "type": {
+        "selector": ".consult-list input[placeholder*='患者姓名']",
+        "value": "李"
+      },
+      "pause": 450
+    },
+    {
+      "move": {
+        "text": "查询"
+      },
+      "pause": 450
+    },
+    {
+      "click": {
+        "text": "查询"
+      },
+      "pause": 300
+    },
+    {
+      "waitFor": {
+        "selector": ".pro-table__row",
+        "timeout": 6000
+      }
+    },
+    {
+      "wait": 1100
+    },
+    {
+      "move": {
+        "text": "重置"
+      },
+      "pause": 350
+    },
+    {
+      "click": {
+        "text": "重置"
+      },
+      "pause": 300
+    },
+    {
+      "waitFor": {
+        "selector": ".pro-table__row",
+        "timeout": 6000
+      }
+    },
+    {
+      "wait": 900
+    },
+    {
+      "move": {
+        "selector": ".pro-table__row"
+      },
+      "pause": 550
+    },
+    {
+      "click": {
+        "selector": ".pro-table__row"
+      },
+      "pause": 400
+    },
+    {
+      "waitFor": {
+        "selector": ".action-bar__action--accept",
+        "timeout": 6000
+      }
+    },
+    {
+      "wait": 1300
+    },
+    {
+      "move": {
+        "selector": ".action-bar__action--accept"
+      },
+      "pause": 650
+    },
+    {
+      "click": {
+        "selector": ".action-bar__action--accept"
+      },
+      "pause": 300
+    },
+    {
+      "waitFor": {
+        "selector": ".action-bar__action--schedule",
+        "timeout": 6000
+      }
+    },
+    {
+      "wait": 1300
+    },
+    {
+      "move": {
+        "selector": ".action-bar__action--schedule"
+      },
+      "pause": 550
+    },
+    {
+      "click": {
+        "selector": ".action-bar__action--schedule"
+      },
+      "pause": 300
+    },
+    {
+      "waitFor": {
+        "selector": ".action-bar__action--start",
+        "timeout": 6000
+      }
+    },
+    {
+      "wait": 1100
+    },
+    {
+      "move": {
+        "selector": ".action-bar__action--start"
+      },
+      "pause": 550
+    },
+    {
+      "click": {
+        "selector": ".action-bar__action--start"
+      },
+      "pause": 300
+    },
+    {
+      "waitFor": {
+        "selector": ".action-bar__demo",
+        "timeout": 6000
+      }
+    },
+    {
+      "wait": 1600
+    },
+    {
+      "move": {
+        "selector": ".action-bar__demo"
+      },
+      "pause": 750
+    },
+    {
+      "click": {
+        "selector": ".action-bar__demo"
+      },
+      "pause": 2400
+    }
+  ]
+}
